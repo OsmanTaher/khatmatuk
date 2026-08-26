@@ -4,6 +4,7 @@ const APP_SHELL = [
   "./index.html",
   "./script.js",
   "./suraHs.json",
+  "./quotes.json",
   "./manifest.json",
   "./192.png",
 ];

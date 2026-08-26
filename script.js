@@ -33,6 +33,8 @@ let activeTab = "surahs";
 let currentStatusFilter = "all";
 let activePageForStatusChange = null;
 let deferredInstallPrompt = null;
+let quotes = { mainQuotes: [], footerQuotes: [] };
+let currentQuoteHour = null;
 
 const installButton = document.getElementById("install-app-btn");
 const isStandalone =
@@ -68,8 +70,12 @@ if ("serviceWorker" in navigator) {
 }
 
 window.onload = async function () {
-  const response = await fetch("./suraHs.json");
-  SuraHs = await response.json();
+  const [surasResponse, quotesResponse] = await Promise.all([
+    fetch("./suraHs.json"),
+    fetch("./quotes.json"),
+  ]);
+  SuraHs = await surasResponse.json();
+  quotes = await quotesResponse.json();
 
   SuraHs.forEach((s) => {
     if (s.start > 604) s.start = 604;
@@ -81,10 +87,36 @@ window.onload = async function () {
   renderSurahsGrid();
   renderJuzGrid();
   renderHistoryLogs();
+  updateHourlyQuotes();
   updateDailyTarget();
 
   updateScrollProgress();
 };
+
+function updateHourlyQuotes() {
+  const now = new Date();
+  const hourKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+
+  if (hourKey === currentQuoteHour) return;
+  currentQuoteHour = hourKey;
+
+  const mainQuote = getRandomQuote(quotes.mainQuotes);
+  const footerQuote = getRandomQuote(quotes.footerQuotes);
+
+  if (mainQuote) {
+    document.getElementById("today-target-desc").innerText = mainQuote;
+  }
+  if (footerQuote) {
+    document.getElementById("footer-quote").innerText = footerQuote;
+  }
+}
+
+function getRandomQuote(quoteList) {
+  if (!Array.isArray(quoteList) || quoteList.length === 0) return "";
+  return quoteList[Math.floor(Math.random() * quoteList.length)];
+}
+
+setInterval(updateHourlyQuotes, 60000);
 
 function loadFromLocalStorage() {
   const savedPages = localStorage.getItem("quran_tracker_pages");
@@ -332,8 +364,7 @@ function updateDailyTarget() {
 
   document.getElementById("today-target-title").innerText =
     `${pageRangeText} (${locationText})`;
-  document.getElementById("today-target-desc").innerText =
-    `وردك اليوم يقع في الأجزاء المقابلة لهذه السور. ركز جيداً، استمع للقراءة، ثم قم بحفظ وتثبيت الوجهين لتحديث تقدمك.`;
+  updateHourlyQuotes();
   document.getElementById("btn-target-complete").classList.remove("hidden");
 
   document.getElementById("btn-target-complete").dataset.start = startPage;
