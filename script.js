@@ -26,6 +26,7 @@ const JuzsData = Array.from({ length: 30 }, (_, i) => {
 });
 
 let pageStates = {};
+let skippedSurahs = {};
 let streakCount = 0;
 let lastActivityDate = "";
 let historyLogs = [];
@@ -120,6 +121,9 @@ setInterval(updateHourlyQuotes, 60000);
 
 function loadFromLocalStorage() {
   const savedPages = localStorage.getItem("quran_tracker_pages");
+  const savedSkippedSurahs = localStorage.getItem(
+    "quran_tracker_skipped_surahs",
+  );
   const savedStreak = localStorage.getItem("quran_tracker_streak");
   const savedLastDate = localStorage.getItem("quran_tracker_last_date");
   const savedLogs = localStorage.getItem("quran_tracker_logs");
@@ -139,6 +143,8 @@ function loadFromLocalStorage() {
     saveToLocalStorage();
   }
 
+  skippedSurahs = savedSkippedSurahs ? JSON.parse(savedSkippedSurahs) : {};
+
   streakCount = savedStreak ? parseInt(savedStreak) : 0;
   lastActivityDate = savedLastDate ? savedLastDate : "";
   historyLogs = savedLogs
@@ -156,6 +162,10 @@ function loadFromLocalStorage() {
 
 function saveToLocalStorage() {
   localStorage.setItem("quran_tracker_pages", JSON.stringify(pageStates));
+  localStorage.setItem(
+    "quran_tracker_skipped_surahs",
+    JSON.stringify(skippedSurahs),
+  );
   localStorage.setItem("quran_tracker_streak", streakCount.toString());
   localStorage.setItem("quran_tracker_last_date", lastActivityDate);
   localStorage.setItem("quran_tracker_logs", JSON.stringify(historyLogs));
@@ -265,9 +275,14 @@ function renderDashboard() {
   let completed = 0;
   let revision = 0;
   let memorizing = 0;
+  let skipped = 0;
   let unstarted = 0;
 
   for (let p = 1; p <= 604; p++) {
+    if (isPageSkipped(p)) {
+      skipped++;
+      continue;
+    }
     if (pageStates[p] === 3) completed++;
     else if (pageStates[p] === 2) revision++;
     else if (pageStates[p] === 1) memorizing++;
@@ -277,6 +292,7 @@ function renderDashboard() {
   const compPercent = ((completed / 604) * 100).toFixed(1);
   const revPercent = ((revision / 604) * 100).toFixed(1);
   const memPercent = ((memorizing / 604) * 100).toFixed(1);
+  const skippedPercent = ((skipped / 604) * 100).toFixed(1);
 
   document.getElementById("global-progress-percent").innerText =
     `${compPercent}%`;
@@ -286,21 +302,25 @@ function renderDashboard() {
     `${revPercent}%`;
   document.getElementById("progress-bar-memorizing").style.width =
     `${memPercent}%`;
+  document.getElementById("progress-bar-skipped").style.width =
+    `${skippedPercent}%`;
 
   document.getElementById("stat-completed-pages").innerText = completed;
   document.getElementById("stat-revision-pages").innerText = revision;
   document.getElementById("stat-memorizing-pages").innerText = memorizing;
-  document.getElementById("stat-remaining-pages").innerText = 604 - completed;
+  document.getElementById("stat-remaining-pages").innerText =
+    604 - completed - skipped;
 
   document.getElementById("legend-completed-cnt").innerText = completed;
   document.getElementById("legend-revision-cnt").innerText = revision;
   document.getElementById("legend-memorizing-cnt").innerText = memorizing;
+  document.getElementById("legend-skipped-cnt").innerText = skipped;
   document.getElementById("legend-unstarted-cnt").innerText = unstarted;
 
   const headerStreak = document.getElementById("header-streak-num");
   if (headerStreak) headerStreak.innerText = streakCount;
 
-  const remaining = 604 - completed;
+  const remaining = 604 - completed - skipped;
   document.getElementById("remaining-days-count").innerText =
     `متبقي لك ${remaining} صفحة`;
 
@@ -327,7 +347,7 @@ function updateDailyTarget() {
   let endPage = -1;
 
   for (let p = 1; p <= 604; p++) {
-    if (pageStates[p] !== 3) {
+    if (pageStates[p] !== 3 && !isPageSkipped(p)) {
       startPage = p;
       break;
     }
@@ -343,7 +363,9 @@ function updateDailyTarget() {
   }
 
   endPage =
-    startPage < 604 && pageStates[startPage + 1] !== 3
+    startPage < 604 &&
+    pageStates[startPage + 1] !== 3 &&
+    !isPageSkipped(startPage + 1)
       ? startPage + 1
       : startPage;
 
@@ -369,6 +391,11 @@ function updateDailyTarget() {
 
   document.getElementById("btn-target-complete").dataset.start = startPage;
   document.getElementById("btn-target-complete").dataset.end = endPage;
+}
+
+function isPageSkipped(page) {
+  const surah = SuraHs.find((s) => page >= s.start && page <= s.end);
+  return Boolean(surah && skippedSurahs[surah.id]);
 }
 
 function completeTodayTarget() {
@@ -407,6 +434,7 @@ function renderSurahsGrid() {
     let sRevision = 0;
     let sMemorizing = 0;
     const totalPages = surah.end - surah.start + 1;
+    const isSkipped = Boolean(skippedSurahs[surah.id]);
 
     for (let p = surah.start; p <= surah.end; p++) {
       if (pageStates[p] === 3) sComplete++;
@@ -418,7 +446,11 @@ function renderSurahsGrid() {
     let cardBorder = "border-slate-200";
     let computedStatus = "unstarted";
 
-    if (sComplete === totalPages) {
+    if (isSkipped) {
+      statusBadge = `<span class="bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-forward"></i> تم التخطي</span>`;
+      cardBorder = "border-red-200 hover:border-red-300";
+      computedStatus = "skipped";
+    } else if (sComplete === totalPages) {
       statusBadge = `<span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-circle-check"></i> تم الحفظ</span>`;
       cardBorder = "border-green-200 hover:border-green-300";
       computedStatus = "completed";
@@ -448,7 +480,8 @@ function renderSurahsGrid() {
     let pagesHtml = "";
     for (let p = surah.start; p <= surah.end; p++) {
       let pageBg = "bg-slate-100 hover:bg-slate-200 text-slate-500";
-      if (pageStates[p] === 3)
+      if (isSkipped) pageBg = "bg-red-200 text-red-800 border-red-300";
+      else if (pageStates[p] === 3)
         pageBg = "bg-brand-mint text-white border-green-300";
       else if (pageStates[p] === 2)
         pageBg = "bg-amber-400 text-slate-800 border-amber-300";
@@ -480,7 +513,7 @@ function renderSurahsGrid() {
                         </div>
 
                         <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
-                            <div class="bg-brand-mint h-full" style="width: ${(sComplete / totalPages) * 100}%"></div>
+                            <div class="${isSkipped ? "bg-red-200" : "bg-brand-mint"} h-full" style="width: ${isSkipped ? 100 : (sComplete / totalPages) * 100}%"></div>
                         </div>
 
                         <div id="pages-detail-${surah.id}" class="hidden mt-4 pt-4 border-t border-slate-100">
@@ -506,6 +539,7 @@ function renderSurahsGrid() {
                                 <option value="3">تم الحفظ كاملاً</option>
                                 <option value="2">قيد المراجعة</option>
                                 <option value="1">قيد الحفظ الآن</option>
+                                <option value="skip">تخطيه الآن</option>
                                 <option value="0">لم تبدأ بعد</option>
                             </select>
                         </div>
@@ -578,6 +612,8 @@ function setSpecificPageState(state) {
   const page = activePageForStatusChange;
 
   pageStates[page] = state;
+  const pageSurah = SuraHs.find((s) => page >= s.start && page <= s.end);
+  if (pageSurah) delete skippedSurahs[pageSurah.id];
 
   const statesNames = {
     0: "غير مبدوء",
@@ -600,11 +636,25 @@ function setSpecificPageState(state) {
 }
 
 function bulkSetSurahStatus(surahId, selectElement) {
-  const state = parseInt(selectElement.value);
-  if (isNaN(state)) return;
-
   const surah = SuraHs.find((s) => s.id === surahId);
   if (!surah) return;
+
+  if (selectElement.value === "skip") {
+    skippedSurahs[surahId] = true;
+    addHistoryLog(`تم تخطي سورة ${surah.name} والانتقال لما بعدها.`);
+    saveToLocalStorage();
+    renderDashboard();
+    renderSurahsGrid();
+    renderJuzGrid();
+    updateDailyTarget();
+    selectElement.selectedIndex = 0;
+    scrollToActiveSurah();
+    return;
+  }
+
+  const state = parseInt(selectElement.value);
+  if (isNaN(state)) return;
+  delete skippedSurahs[surahId];
 
   for (let p = surah.start; p <= surah.end; p++) {
     pageStates[p] = state;
@@ -843,6 +893,7 @@ function openResetModal() {
       for (let p = 1; p <= 604; p++) {
         pageStates[p] = 0;
       }
+      skippedSurahs = {};
       streakCount = 0;
       lastActivityDate = "";
       historyLogs = [
