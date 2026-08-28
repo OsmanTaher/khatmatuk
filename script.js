@@ -195,6 +195,53 @@ function scrollToTop() {
   });
 }
 
+function toggleMobileMenu(event) {
+  const panel = document.getElementById("mobile-menu-panel");
+  const toggle = document.getElementById("mobile-menu-toggle");
+
+  if (!panel || !toggle) return;
+
+  const isOpen = !panel.classList.contains("hidden");
+  panel.classList.toggle("hidden");
+  toggle.setAttribute("aria-expanded", String(!isOpen));
+  toggle.innerHTML = isOpen
+    ? '<i class="fa-solid fa-bars text-lg"></i>'
+    : '<i class="fa-solid fa-xmark text-lg"></i>';
+
+  if (event) {
+    event.stopPropagation();
+  }
+}
+
+function closeMobileMenu() {
+  const panel = document.getElementById("mobile-menu-panel");
+  const toggle = document.getElementById("mobile-menu-toggle");
+
+  if (!panel || !toggle) return;
+
+  panel.classList.add("hidden");
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.innerHTML = '<i class="fa-solid fa-bars text-lg"></i>';
+}
+
+document.addEventListener("click", (event) => {
+  const panel = document.getElementById("mobile-menu-panel");
+  const toggle = document.getElementById("mobile-menu-toggle");
+  const header = document.querySelector("header");
+
+  if (!panel || !toggle || !header) return;
+
+  const clickedInside = header.contains(event.target);
+  if (!clickedInside) {
+    closeMobileMenu();
+    return;
+  }
+
+  if (!panel.contains(event.target) && !toggle.contains(event.target)) {
+    closeMobileMenu();
+  }
+});
+
 function updateScrollProgress() {
   const winScroll =
     document.body.scrollTop || document.documentElement.scrollTop;
@@ -308,8 +355,7 @@ function renderDashboard() {
   document.getElementById("stat-completed-pages").innerText = completed;
   document.getElementById("stat-revision-pages").innerText = revision;
   document.getElementById("stat-memorizing-pages").innerText = memorizing;
-  document.getElementById("stat-remaining-pages").innerText =
-    604 - completed - skipped;
+  document.getElementById("stat-remaining-pages").innerText = 604 - completed;
 
   document.getElementById("legend-completed-cnt").innerText = completed;
   document.getElementById("legend-revision-cnt").innerText = revision;
@@ -320,7 +366,7 @@ function renderDashboard() {
   const headerStreak = document.getElementById("header-streak-num");
   if (headerStreak) headerStreak.innerText = streakCount;
 
-  const remaining = 604 - completed - skipped;
+  const remaining = 604 - completed;
   document.getElementById("remaining-days-count").innerText =
     `متبقي لك ${remaining} صفحة`;
 
@@ -847,10 +893,21 @@ function switchTab(tabId) {
 
   document.querySelectorAll('[id^="tab-btn-"]').forEach((btn) => {
     btn.className =
-      "px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap";
+      btn.id === "tab-btn-surahs" ||
+      btn.id === "tab-btn-juzs" ||
+      btn.id === "tab-btn-history"
+        ? "px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 border border-transparent bg-white/10 text-white/90 hover:bg-white/15"
+        : "px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap";
   });
-  document.getElementById(`tab-btn-${tabId}`).className =
-    "px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-brand-emerald text-brand-emerald flex items-center gap-2 whitespace-nowrap";
+  const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+  if (activeBtn) {
+    activeBtn.className =
+      activeBtn.id === "tab-btn-surahs" ||
+      activeBtn.id === "tab-btn-juzs" ||
+      activeBtn.id === "tab-btn-history"
+        ? "px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 border border-brand-accent bg-brand-accent/20 text-white shadow-sm"
+        : "px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-brand-emerald text-brand-emerald flex items-center gap-2 whitespace-nowrap";
+  }
 
   document.getElementById("tab-content-surahs").classList.add("hidden");
   document.getElementById("tab-content-juzs").classList.add("hidden");

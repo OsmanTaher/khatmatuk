@@ -74,46 +74,138 @@
       html {
         scroll-behavior: smooth;
       }
+
+      .mobile-menu-panel {
+        position: absolute;
+        inset: calc(100% + 0.5rem) 1rem auto 1rem;
+        z-index: 50;
+      }
     </style>
   </head>
   <body class="text-slate-800 min-h-screen flex flex-col">
     <!-- Header Navbar -->
-    <header class="bg-brand-emerald text-white shadow-lg sticky top-0 z-40">
-      <div
+    <header
+      class="bg-brand-emerald text-white shadow-lg sticky top-0 z-40 relative"
+    >
+     
+    <div
         class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center gap-4"
       >
-        <!-- الشعار التفاعلي للصعود التدريجي السلس -->
-        <div
+      <div
           onclick="scrollToTop()"
-          class="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-95 transition-all duration-300 group"
+          class="flex items-center gap-3 cursor-pointer hover:opacity-90 active:scale-95 transition-all duration-300 group order-2"
           title="العودة للرئيسية"
         >
           <div
             class="bg-brand-accent/20 rounded-full border border-brand-accent/40 group-hover:border-brand-accent group-hover:bg-brand-accent/30 transition-all duration-300"
           >
-            <img src="512.png" width="40" height="40" alt="" />
+            <img src="512.png" width="40" height="40" alt="شعار التطبيق" />
           </div>
         </div>
-
-        <div class="flex items-center gap-3">
+        <div class="md:hidden flex items-center gap-2 order-1">
           <button
-            id="install-app-btn"
-            onclick="installApp()"
-            class="hidden bg-brand-accent hover:bg-amber-500 text-brand-dark font-bold px-3 py-2 rounded-xl text-sm transition items-center gap-2"
+            id="mobile-menu-toggle"
+            type="button"
+            class="inline-flex items-center justify-center w-11 h-11 rounded-full border border-white/20 bg-white/10 text-white shadow-sm transition hover:bg-white/15"
+            aria-label="فتح القائمة"
+            aria-expanded="false"
+            onclick="toggleMobileMenu(event)"
           >
-            <i class="fa-solid fa-download"></i>
-            تثبيت التطبيق
+            <i class="fa-solid fa-bars text-lg"></i>
           </button>
         </div>
+
+        <nav
+          id="main-menu"
+          class="hidden md:flex items-center gap-2 overflow-x-auto max-w-full bg-white/10 px-2 py-1.5 rounded-full border border-white/10 backdrop-blur-sm order-1"
+          aria-label="القائمة الرئيسية"
+        >
+          <button
+            onclick="
+              switchTab('surahs');
+              closeMobileMenu();
+            "
+            id="tab-btn-surahs"
+            class="px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 border border-transparent bg-white/10 text-white/90 hover:bg-white/15"
+          >
+            سور القرآن الكريم
+          </button>
+          <button
+            onclick="
+              switchTab('juzs');
+              closeMobileMenu();
+            "
+            id="tab-btn-juzs"
+            class="px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 border border-transparent bg-white/10 text-white/90 hover:bg-white/15"
+          >
+            تتبع الأجزاء
+          </button>
+          <button
+            onclick="
+              switchTab('history');
+              closeMobileMenu();
+            "
+            id="tab-btn-history"
+            class="px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 border border-transparent bg-white/10 text-white/90 hover:bg-white/15"
+          >
+            سجل إنجازاتك
+          </button>
+        </nav>
+
+        
       </div>
 
-      <!-- شريط التقدم التفاعلي الذي يملأ كلما تم التمرير لأسفل -->
       <div class="w-full h-1 bg-brand-dark/30 overflow-hidden relative">
         <div
           id="scroll-progress"
           class="h-full bg-brand-accent shadow-[0_0_8px_#dfb76c] transition-all duration-75 ease-out"
           style="width: 0%"
         ></div>
+      </div>
+
+      <div id="mobile-menu-panel" class="mobile-menu-panel hidden md:hidden">
+        <div
+          class="bg-white rounded-2xl shadow-2xl border border-emerald-100 overflow-hidden"
+        >
+          <button
+            onclick="
+              switchTab('surahs');
+              closeMobileMenu();
+            "
+            class="w-full text-right px-4 py-3 text-sm font-bold text-brand-emerald border-b border-slate-100 hover:bg-emerald-50 transition"
+          >
+            سور القرآن الكريم
+          </button>
+          <button
+            onclick="
+              switchTab('juzs');
+              closeMobileMenu();
+            "
+            class="w-full text-right px-4 py-3 text-sm font-bold text-brand-emerald border-b border-slate-100 hover:bg-emerald-50 transition"
+          >
+            تتبع الأجزاء
+          </button>
+          <button
+            onclick="
+              switchTab('history');
+              closeMobileMenu();
+            "
+            class="w-full text-right px-4 py-3 text-sm font-bold text-brand-emerald border-b border-slate-100 hover:bg-emerald-50 transition"
+          >
+            سجل إنجازاتك
+          </button>
+          <button
+            id="install-app-btn"
+            onclick="
+              installApp();
+              closeMobileMenu();
+            "
+            class="hidden w-full text-right px-4 py-3 text-sm font-bold text-brand-emerald hover:bg-emerald-50 transition items-center justify-between gap-2"
+          >
+            <span>تثبيت التطبيق</span>
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -368,36 +460,6 @@
           </div>
         </div>
       </section>
-
-      <!-- Main Workspace Tabs -->
-      <div
-        class="mb-6 flex border-b border-slate-200 gap-2 overflow-x-auto pb-1"
-      >
-        <button
-          onclick="switchTab('surahs')"
-          id="tab-btn-surahs"
-          class="px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-brand-emerald text-brand-emerald flex items-center gap-2 whitespace-nowrap"
-        >
-          <i class="fa-solid fa-list-ol"></i>
-          سور القرآن الكريم (114)
-        </button>
-        <button
-          onclick="switchTab('juzs')"
-          id="tab-btn-juzs"
-          class="px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap"
-        >
-          <i class="fa-solid fa-grip-vertical"></i>
-          تتبع بالأجزاء الثلاثين
-        </button>
-        <button
-          onclick="switchTab('history')"
-          id="tab-btn-history"
-          class="px-5 py-3 font-semibold text-sm transition-all duration-200 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap"
-        >
-          <i class="fa-solid fa-clock-rotate-left"></i>
-          سجل إنجازاتك
-        </button>
-      </div>
 
       <!-- TAB CONTENT: SURAHS -->
       <section id="tab-content-surahs" class="space-y-6">
